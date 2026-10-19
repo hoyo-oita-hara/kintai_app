@@ -34,7 +34,9 @@
 
     <div class="card">
         <h1>👋 {{ user.name }} さんの打刻 ({{ today }})</h1>
-        
+   <div class="card">
+    <h1>👏 {{ user.name }} さんの打刻 ({{ today }})</h1>
+    <h2 id="current-time" style="text-align: center; font-size: 2rem; margin: 10px 0;">--:--:--</h2>     
         <div class="btn-group">
             <form action="/clock" method="POST">
                 <input type="hidden" name="user_id" value="{{ user.id }}">
@@ -91,5 +93,21 @@
     </div>
     {% endif %}
 
-</body>
+    <script>
+      function updateClock() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        
+        const clockElement = document.getElementById('current-time');
+        if (clockElement) {
+          clockElement.textContent = `${hours}:${minutes}:${seconds}`;
+        }
+      }
+
+      setInterval(updateClock, 1000);
+      updateClock();
+    </script>
+  </body>
 </html>
