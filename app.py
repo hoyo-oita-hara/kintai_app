@@ -1,7 +1,8 @@
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+JST = timezone(timedelta(hours=9))
 from flask import Flask, render_template, request, redirect, url_for
 
 app = Flask(__name__)
@@ -87,7 +88,7 @@ def verify_password(username, password):
 @app.route('/')
 def index():
     user_id = request.args.get('user_id', 1)
-    today = datetime.now().strftime('%Y-%m-%d')
+    today = datetime.now(JST).strftime('%Y-%m-%d')
     
     with get_db() as conn:
         user = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
@@ -104,8 +105,8 @@ def index():
 def clock():
     user_id = request.form['user_id']
     action = request.form['action']
-    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    today = datetime.now().strftime('%Y-%m-%d')
+   now_str = datetime.now(JST).strftime('%Y-%m-%d %H:%M:%S')
+   today = datetime.now(JST).strftime('%Y-%m-%d')
     
     with get_db() as conn:
         cursor = conn.cursor()
@@ -157,7 +158,7 @@ def request_correction():
 @app.route('/admin')
 @auth.login_required
 def admin():
-    selected_month = request.args.get('month', datetime.now().strftime('%Y-%m'))
+    selected_month = request.args.get('month', datetime.now(JST).strftime('%Y-%m'))
     
     with get_db() as conn:
         users = conn.execute('SELECT * FROM users').fetchall()
