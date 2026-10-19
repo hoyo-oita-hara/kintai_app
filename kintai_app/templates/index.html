@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勤怠打刻</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f8; margin: 0; padding: 15px; }
+        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        h1 { font-size: 1.2rem; color: #333; margin-top: 0; }
+        .btn-group { display: flex; flex-direction: column; gap: 10px; margin: 15px 0; }
+        .btn { padding: 16px; font-size: 1.1rem; font-weight: bold; border: none; border-radius: 8px; color: white; cursor: pointer; width: 100%; }
+        .btn-in { background: #28a745; }
+        .btn-out { background: #dc3545; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .input-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .input-row label { font-size: 0.9rem; width: 100px; }
+        .input-row input { padding: 8px; border: 1px solid #ccc; border-radius: 6px; width: 80px; }
+        .status { background: #e9ecef; padding: 12px; border-radius: 6px; font-size: 0.9rem; }
+        input, select, textarea { width: 100%; padding: 10px; margin: 5px 0 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        .submit-btn { background: #007bff; color: white; border: none; padding: 12px; border-radius: 6px; width: 100%; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <label>スタッフ切り替え:</label>
+        <select onchange="location.href='/?user_id=' + this.value">
+            {% for u in users %}
+            <option value="{{ u.id }}" {% if u.id == user.id %}selected{% endif %}>{{ u.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="card">
+        <h1>👋 {{ user.name }} さんの打刻 ({{ today }})</h1>
+        
+        <div class="btn-group">
+            <form action="/clock" method="POST">
+                <input type="hidden" name="user_id" value="{{ user.id }}">
+                <input type="hidden" name="action" value="in">
+                <div class="input-row">
+                    <label>遅刻（分）:</label>
+                    <input type="number" name="tardy_minutes" value="0" min="0">
+                </div>
+                <button type="submit" class="btn btn-in" {% if attendance and attendance.clock_in %}disabled{% endif %}>出 社</button>
+            </form>
+
+            <form action="/clock" method="POST">
+                <input type="hidden" name="user_id" value="{{ user.id }}">
+                <input type="hidden" name="action" value="out">
+                <div class="input-row">
+                    <label>早退（分）:</label>
+                    <input type="number" name="early_leave_minutes" value="0" min="0">
+                </div>
+                <button type="submit" class="btn btn-out" {% if not attendance or not attendance.clock_in or attendance.clock_out %}disabled{% endif %}>退 社</button>
+            </form>
+        </div>
+
+        <div class="status">
+            <p>出社時間: <strong>{{ attendance.clock_in if attendance and attendance.clock_in else '未打刻' }}</strong>
+            {% if attendance and attendance.tardy_minutes > 0 %} <span style="color:red;">(遅刻 {{ attendance.tardy_minutes }}分)</span>{% endif %}</p>
+            <p>退社時間: <strong>{{ attendance.clock_out if attendance and attendance.clock_out else '未打刻' }}</strong>
+            {% if attendance and attendance.early_leave_minutes > 0 %} <span style="color:orange;">(早退 {{ attendance.early_leave_minutes }}分)</span>{% endif %}</p>
+            {% if attendance and attendance.clock_out %}
+            <hr>
+            <p>実働時間: <strong>{{ attendance.actual_hours }} 時間</strong></p>
+            <p style="color: #d9534f;">残業時間: <strong>{{ attendance.overtime_hours }} 時間</strong></p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if attendance %}
+    <div class="card">
+        <h1>✏️ 打刻修正の申請</h1>
+        <form action="/request_correction" method="POST">
+            <input type="hidden" name="attendance_id" value="{{ attendance.id }}">
+            <input type="hidden" name="user_id" value="{{ user.id }}">
+            
+            <label>修正後の出社日時</label>
+            <input type="text" name="requested_clock_in" value="{{ attendance.clock_in or today + ' 09:00:00' }}" required>
+            
+            <label>修正後の退社日時</label>
+            <input type="text" name="requested_clock_out" value="{{ attendance.clock_out or today + ' 18:00:00' }}" required>
+            
+            <label>修正理由</label>
+            <textarea name="reason" placeholder="打刻忘れのため" required></textarea>
+            
+            <button type="submit" class="submit-btn">修正申請を送信</button>
+        </form>
+    </div>
+    {% endif %}
+
+</body>
+</html>

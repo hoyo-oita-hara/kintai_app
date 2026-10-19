@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>勤怠管理画面</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background: #f8f9fa; }
+        h1, h2 { color: #333; }
+        table { width: 100%; border-collapse: collapse; background: white; margin-bottom: 25px; font-size: 0.95rem; }
+        th, td { border: 1px solid #dee2e6; padding: 10px; text-align: left; }
+        th { background: #007bff; color: white; }
+        .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+        .badge-overtime { background: #ffc107; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
+        .btn-approve { background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .btn-reject { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .btn-add { background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+        input[type="text"] { padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <h1>管理者ダッシュボード</h1>
+    <p><a href="/">← 打刻画面へ戻る</a></p>
+
+    <div class="card">
+        <h2>👤 スタッフ（ユーザー）の新規登録</h2>
+        <form action="/add_user" method="POST" style="display:flex; gap:10px;">
+            <input type="text" name="name" placeholder="スタッフ名を入力（例: 鈴木 一郎）" required style="flex:1;">
+            <button type="submit" class="btn-add">登録する</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>🗓️ 月ベースの集計ダッシュボード</h2>
+        <form method="GET" action="/admin" style="margin-bottom: 15px;">
+            <label>表示年月: </label>
+            <input type="month" name="month" value="{{ selected_month }}" onchange="this.form.submit()">
+        </form>
+        <table>
+            <thead>
+                <tr>
+                    <th>スタッフ名</th>
+                    <th>出勤日数</th>
+                    <th>合計実働時間</th>
+                    <th>合計残業時間</th>
+                    <th>遅刻回数</th>
+                    <th>早退回数</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in monthly_summary %}
+                <tr>
+                    <td><strong>{{ m.name }}</strong></td>
+                    <td>{{ m.work_days or 0 }} 日</td>
+                    <td>{{ m.total_actual_hours or 0 }} 時間</td>
+                    <td><span class="badge-overtime">{{ m.total_overtime_hours or 0 }} 時間</span></td>
+                    <td>{{ m.tardy_count or 0 }} 回</td>
+                    <td>{{ m.early_leave_count or 0 }} 回</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <h2>📩 未承認の修正申請 ({{ requests|length }}件)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>スタッフ名</th>
+                <th>対象日</th>
+                <th>申請出社時刻</th>
+                <th>申請退社時刻</th>
+                <th>理由</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in requests %}
+            <tr>
+                <td>{{ r.name }}</td>
+                <td>{{ r.work_date }}</td>
+                <td>{{ r.requested_clock_in }}</td>
+                <td>{{ r.requested_clock_out }}</td>
+                <td>{{ r.reason }}</td>
+                <td>
+                    <form action="/approve/{{ r.id }}/approve" method="POST" style="display:inline;">
+                        <button type="submit" class="btn-approve">承認</button>
+                    </form>
+                    <form action="/approve/{{ r.id }}/reject" method="POST" style="display:inline;">
+                        <button type="submit" class="btn-reject">却下</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6">未処理の申請はありません。</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>📅 1日ベースの全勤怠履歴</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>日付</th>
+                <th>名前</th>
+                <th>出社</th>
+                <th>退社</th>
+                <th>遅刻 / 早退</th>
+                <th>実働時間</th>
+                <th>残業時間</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in attendances %}
+            <tr>
+                <td>{{ a.work_date }}</td>
+                <td>{{ a.name }}</td>
+                <td>{{ a.clock_in or '-' }}</td>
+                <td>{{ a.clock_out or '-' }}</td>
+                <td>
+                    {% if a.tardy_minutes > 0 %}<span style="color:red;">遅刻{{ a.tardy_minutes }}分</span> {% endif %}
+                    {% if a.early_leave_minutes > 0 %}<span style="color:orange;">早退{{ a.early_leave_minutes }}分</span>{% endif %}
+                    {% if a.tardy_minutes == 0 and a.early_leave_minutes == 0 %}-{% endif %}
+                </td>
+                <td>{{ a.actual_hours }} 時間</td>
+                <td>
+                    {% if a.overtime_hours > 0 %}
+                    <span class="badge-overtime">{{ a.overtime_hours }} 時間</span>
+                    {% else %}
+                    0 時間
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</body>
+</html>
