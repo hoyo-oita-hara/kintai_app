@@ -84,15 +84,6 @@ def verify_password(username, password):
     if username in users and check_password_hash(users.get(username), password):
         return username
 
-@app.route('/admin')
-@auth.login_required
-def admin():
-    # 管理画面の処理（例：データベースからユーザーや勤怠データを取得して表示）
-    with get_db() as conn:
-        users = conn.execute('SELECT * FROM users').fetchall()
-        attendance = conn.execute('SELECT * FROM attendance').fetchall()
-    return render_template('admin.html', users=users, attendance=attendance)
-
 @app.route('/')
 def index():
     user_id = request.args.get('user_id', 1)
@@ -164,6 +155,7 @@ def request_correction():
 
 # --- 管理者画面（集計・スタッフ追加） ---
 @app.route('/admin')
+@auth.login_required
 def admin():
     selected_month = request.args.get('month', datetime.now().strftime('%Y-%m'))
     
