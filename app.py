@@ -105,8 +105,8 @@ def index():
 def clock():
     user_id = request.form['user_id']
     action = request.form['action']
-   now_str = datetime.now(JST).strftime('%Y-%m-%d %H:%M:%S')
-   today = datetime.now(JST).strftime('%Y-%m-%d')
+    now_str = datetime.now(JST).strftime('%Y-%m-%d %H:%M:%S')
+    today = datetime.now(JST).strftime('%Y-%m-%d')
     
     with get_db() as conn:
         cursor = conn.cursor()
