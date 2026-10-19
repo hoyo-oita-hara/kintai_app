@@ -1,3 +1,5 @@
+from flask_httpauth import HTTPBasicAuth
+from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for
@@ -70,6 +72,27 @@ def calculate_hours(clock_in_str, clock_out_str, break_minutes=60):
     return actual_hours, overtime_hours
 
 # --- 打刻画面 ---
+auth = HTTPBasicAuth()
+
+# 管理者のパスワード設定（"your_password" の部分を設定したいパスワードに変更してください）
+users = {
+    "admin": generate_password_hash("kazuumi72381")
+}
+
+@auth.verify_password
+def verify_password(username, password):
+    if username in users and check_password_hash(users.get(username), password):
+        return username
+
+@app.route('/admin')
+@auth.login_required
+def admin():
+    # 管理画面の処理（例：データベースからユーザーや勤怠データを取得して表示）
+    with get_db() as conn:
+        users = conn.execute('SELECT * FROM users').fetchall()
+        attendance = conn.execute('SELECT * FROM attendance').fetchall()
+    return render_template('admin.html', users=users, attendance=attendance)
+
 @app.route('/')
 def index():
     user_id = request.args.get('user_id', 1)
